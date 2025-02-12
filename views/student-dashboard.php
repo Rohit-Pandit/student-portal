@@ -1,46 +1,47 @@
 <?php
-// Start the session
 session_start();
-
-// Include the database connection
 require_once '../database/db.php';
 
-// Check if the user is logged in
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
-    header("Location: index.php");
+    header("Location: ../views/login.html");
     exit();
 }
 
-// Fetch the logged-in student's data
 $user_id = $_SESSION['user_id'];
-$query = $conn->prepare("SELECT full_name, email FROM students WHERE id = ?");
-$query->bind_param("i", $user_id);
-$query->execute();
-$result = $query->get_result();
 
-if ($result->num_rows > 0) {
-    $student = $result->fetch_assoc();
-} else {
-    echo "Error: Student not found.";
-    exit();
-}
+// Fetch student details
+$student_query = $conn->prepare("SELECT full_name, email FROM students WHERE id = ?");
+$student_query->bind_param("i", $user_id);
+$student_query->execute();
+$student_result = $student_query->get_result();
+$student = $student_result->fetch_assoc();
 
-// Fetch the enrolled subjects from the enrollments table
+// Fetch enrolled subjects
 $subjects_query = $conn->prepare("
-    SELECT s.subject_name 
-    FROM enrollments e
-    JOIN subjects s ON e.subject_id = s.id 
-    WHERE e.user_id = ? AND e.role = 'student'
+    SELECT subjects.subject_name 
+    FROM enrollments 
+    JOIN subjects ON enrollments.subject_id = subjects.id 
+    WHERE enrollments.user_id = ? 
 ");
 $subjects_query->bind_param("i", $user_id);
 $subjects_query->execute();
 $subjects_result = $subjects_query->get_result();
 
-$enrolled_subjects = [];
-while ($row = $subjects_result->fetch_assoc()) {
-    $enrolled_subjects[] = $row['subject_name'];
-}
-
+// Fetch uploaded assignments along with grades
+$assignment_query = $conn->prepare("
+    SELECT 
+        assignments.id AS assignment_id, 
+        subjects.subject_name, 
+        assignments.file_path, 
+        assignments.created_at, 
+        assignments.grade 
+    FROM assignments 
+    JOIN subjects ON assignments.subject_id = subjects.id 
+    WHERE assignments.student_id = ?
+");
+$assignment_query->bind_param("i", $user_id);
+$assignment_query->execute();
+$assignment_result = $assignment_query->get_result();
 ?>
 
 <!DOCTYPE html>
@@ -53,18 +54,59 @@ while ($row = $subjects_result->fetch_assoc()) {
 </head>
 <body>
     <div class="dashboard-container">
-        <h1>Welcome, <?php echo htmlspecialchars($student['full_name']); ?>!</h1>
-        <p><strong>Email:</strong> <?php echo htmlspecialchars($student['email']); ?></p>
-        <p><strong>Enrolled Subjects:</strong></p>
-        <ul>
-            <?php
-            foreach ($enrolled_subjects as $subject) {
-                echo "<li>" . htmlspecialchars($subject) . "</li>";
-            }
-            ?>
-        </ul>
+        <h1>Welcome, <?php echo htmlspecialchars($student['full_name']); ?></h1>
+        <p>Email: <?php echo htmlspecialchars($student['email']); ?></p>
 
-        <a href="../actions/logout.php" class="btn">Logout</a>
+        <!-- Enrolled Subjects Section -->
+        <h2>Your Enrolled Subjects</h2>
+        <?php if ($subjects_result->num_rows > 0): ?>
+            <ul>
+                <?php while ($subject = $subjects_result->fetch_assoc()): ?>
+                    <li><?php echo htmlspecialchars($subject['subject_name']); ?></li>
+                <?php endwhile; ?>
+            </ul>
+        <?php else: ?>
+            <p>You are not enrolled in any subjects.</p>
+        <?php endif; ?>
+
+        <!-- Uploaded Assignments Section -->
+        <h2>Your Uploaded Assignments</h2>
+        <?php if ($assignment_result->num_rows > 0): ?>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>File Name</th>
+                        <th>Upload Date</th>
+                        <th>Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php while ($assignment = $assignment_result->fetch_assoc()): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($assignment['subject_name']); ?></td>
+                            <td>
+                                <a href="../uploads/<?php echo htmlspecialchars($assignment['file_path']); ?>" target="_blank">
+                                    <?php echo htmlspecialchars($assignment['file_path']); ?>
+                                </a>
+                            </td>
+                            <td><?php echo htmlspecialchars($assignment['created_at']); ?></td>
+                            <td>
+                                <?php 
+                                echo $assignment['grade'] 
+                                    ? htmlspecialchars($assignment['grade']) 
+                                    : "Under Review"; 
+                                ?>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        <?php else: ?>
+            <p>No assignments uploaded yet.</p>
+        <?php endif; ?>
+
+        <a href="../actions/logout.php">Logout</a>
     </div>
 </body>
 </html>
