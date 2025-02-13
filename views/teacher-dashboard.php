@@ -56,7 +56,7 @@ $assignments_result = $assignments_query->get_result();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard</title>
-    <link rel="stylesheet" href="../styles/style.css">
+    <link rel="stylesheet" href="">
 </head>
 <body>
     <div class="dashboard-container">
@@ -95,11 +95,11 @@ $assignments_result = $assignments_query->get_result();
                             <td><?php echo htmlspecialchars($assignment['student_name']); ?></td>
                             <td><?php echo htmlspecialchars($assignment['subject_name']); ?></td>
                             <td>
-                                <a href="../uploads/<?php echo htmlspecialchars($assignment['file_name']); ?>" target="_blank">
-                                    <?php echo htmlspecialchars($assignment['file_name']); ?>
+                                <a href="../uploads/<?php echo htmlspecialchars($assignment['file_path']); ?>" target="_blank">
+                                    <?php echo htmlspecialchars($assignment['file_path']); ?>
                                 </a>
                             </td>
-                            <td><?php echo htmlspecialchars($assignment['upload_date']); ?></td>
+                            <td><?php echo htmlspecialchars($assignment['created_at']); ?></td>
                             <td>
                                 <?php echo $assignment['grade'] ? htmlspecialchars($assignment['grade']) : "Not Graded"; ?>
                             </td>

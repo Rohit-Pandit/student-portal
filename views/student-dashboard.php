@@ -50,7 +50,7 @@ $assignment_result = $assignment_query->get_result();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Dashboard</title>
-    <link rel="stylesheet" href="../styles/style.css">
+    <link rel="stylesheet" href="">
 </head>
 <body>
     <div class="dashboard-container">
@@ -76,7 +76,7 @@ $assignment_result = $assignment_query->get_result();
                 <thead>
                     <tr>
                         <th>Subject</th>
-                        <th>File Name</th>
+                        <th>File Path</th>
                         <th>Upload Date</th>
                         <th>Grade</th>
                     </tr>
@@ -104,7 +104,36 @@ $assignment_result = $assignment_query->get_result();
             </table>
         <?php else: ?>
             <p>No assignments uploaded yet.</p>
+
         <?php endif; ?>
+
+        <h2>Upload a New Assignment</h2>
+        <form action="../actions/upload-assignment.php" method="post" enctype="multipart/form-data">
+            <label for="subject">Select Subject:</label>
+            <select name="subject_id" id="subject" required>
+                <?php
+                $subjects_query = $conn->prepare("
+                    SELECT subjects.id, subjects.subject_name 
+                    FROM enrollments 
+                    JOIN subjects ON enrollments.subject_id = subjects.id 
+                    WHERE enrollments.user_id = ?
+                ");
+                $subjects_query->bind_param("i", $user_id);
+                $subjects_query->execute();
+                $subjects_result = $subjects_query->get_result();
+
+                while ($subject = $subjects_result->fetch_assoc()): ?>
+                    <option value="<?php echo $subject['id']; ?>">
+                        <?php echo htmlspecialchars($subject['subject_name']); ?>
+                    </option>
+                <?php endwhile; ?>
+            </select>
+
+            <label for="assignment_file">Upload Assignment File:</label>
+            <input type="file" name="assignment_file" id="assignment_file" required>
+            <button type="submit">Upload</button>
+        </form>
+
 
         <a href="../actions/logout.php">Logout</a>
     </div>
